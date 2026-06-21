@@ -1472,3 +1472,64 @@ function showToast(message, isDanger = false) {
     }, 300);
   }, 3500);
 }
+
+// -------------------------------------------------------------
+// PWA INSTALL PROMPT HANDLING
+// -------------------------------------------------------------
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the default browser install prompt
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  
+  // Check if user hasn't dismissed the banner recently
+  const dismissed = localStorage.getItem('fuelflow_pwa_dismissed');
+  if (dismissed) {
+    const dismissedTime = parseInt(dismissed, 10);
+    // Don't show again for 7 days after dismissal
+    if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
+  }
+  
+  // Show the custom install banner
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'block';
+});
+
+// Install button click
+document.addEventListener('DOMContentLoaded', () => {
+  const installBtn = document.getElementById('pwa-install-btn');
+  const dismissBtn = document.getElementById('pwa-dismiss-btn');
+  const banner = document.getElementById('pwa-install-banner');
+  
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        showToast('FuelFlow installed successfully! 🎉', 'success');
+      }
+      
+      deferredInstallPrompt = null;
+      if (banner) banner.style.display = 'none';
+    });
+  }
+  
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      if (banner) banner.style.display = 'none';
+      localStorage.setItem('fuelflow_pwa_dismissed', Date.now().toString());
+    });
+  }
+});
+
+// Listen for successful installation
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  console.log('[PWA] FuelFlow was installed');
+});

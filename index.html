@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="description" content="Petrol pump daily sales tracking, nozzle readings, expense management, and cash reconciliation.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FuelFlow">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-180x180.png">
   <title>FuelFlow - Petrol Pump Daily Sales & Collection Manager</title>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,6 +22,21 @@
 </head>
 <body class="light-mode">
   
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
+    <div class="pwa-install-content">
+      <div class="pwa-install-icon">
+        <i class="fas fa-download"></i>
+      </div>
+      <div class="pwa-install-text">
+        <strong>Install FuelFlow</strong>
+        <span>Add to home screen for quick access & offline use</span>
+      </div>
+      <button id="pwa-install-btn" class="pwa-install-btn">Install</button>
+      <button id="pwa-dismiss-btn" class="pwa-dismiss-btn"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+
   <!-- App Container -->
   <div class="app-layout">
     
@@ -747,5 +769,19 @@
 
   <!-- Javascript Logic -->
   <script src="app.js"></script>
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('[PWA] Service Worker registered with scope:', registration.scope);
+          })
+          .catch((error) => {
+            console.log('[PWA] Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
