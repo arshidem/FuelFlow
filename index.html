@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FuelFlow - Petrol Pump Daily Sales & Collection Manager</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="light-mode">
+  
+  <!-- App Container -->
+  <div class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <i class="fa-solid fa-gas-pump"></i>
+          <span>FuelFlow</span>
+        </div>
+        <p class="tagline">Pump Collection Manager</p>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-tab="new-entry">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span>New Entry</span>
+        </button>
+        <button class="nav-btn" data-tab="history">
+          <i class="fa-solid fa-history"></i>
+          <span>History Logs</span>
+        </button>
+        <button class="nav-btn" data-tab="settings">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Pump Settings</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="app-version">v1.0.0</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Action Bar -->
+      <header class="top-bar">
+        <div class="page-title-section">
+          <h1 id="page-title">Daily Collection Entry</h1>
+          <p class="current-date-display" id="header-date"></p>
+        </div>
+        
+        <div class="top-bar-actions">
+          <button id="theme-toggle-header" class="btn btn-outline btn-icon-only" title="Toggle Theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+          <div class="date-picker-wrapper">
+            <label for="entry-date"><i class="fa-regular fa-calendar"></i></label>
+            <input type="date" id="entry-date" name="entry-date">
+          </div>
+          <button id="btn-quick-save" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Save
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: NEW ENTRY VIEW -->
+      <section id="tab-new-entry" class="tab-pane active">
+        <div class="grid-layout">
+          
+          <!-- Column 1: Core Sales & Readings -->
+          <div class="main-column">
+            
+            <!-- Fuel Sales Section -->
+            <div class="dashboard-card card-glow">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-droplet icon-fuel"></i>
+                  <h2>Fuel Nozzle Readings</h2>
+                </div>
+                <div class="card-actions">
+                  <button id="btn-add-nozzle" class="btn btn-outline btn-sm">
+                    <i class="fa-solid fa-plus"></i> Add Nozzle
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table id="nozzle-table" class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Nozzle / Fuel Type</th>
+                        <th>Rate (₹/L)</th>
+                        <th>Opening (L)</th>
+                        <th>Closing (L)</th>
+                        <th>Testing (L)</th>
+                        <th>Net Qty (L)</th>
+                        <th>Amount (₹)</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="nozzle-rows">
+                      <!-- Dynamically Populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lubricant & Oil Sales Section -->
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-bottle-droplet icon-oil"></i>
+                  <h2>Oils & Lubricants Sales</h2>
+                </div>
+                <div class="card-actions">
+                  <button id="btn-add-oil" class="btn btn-outline btn-sm">
+                    <i class="fa-solid fa-plus"></i> Add Item
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table id="oil-table" class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Item Description</th>
+                        <th>Unit Price (₹)</th>
+                        <th>Quantity</th>
+                        <th>Total Amount (₹)</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="oil-rows">
+                      <!-- Dynamically Populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expenses Section -->
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-receipt icon-expense"></i>
+                  <h2>Daily Expenses Paid</h2>
+                </div>
+                <div class="card-actions">
+                  <button id="btn-add-expense" class="btn btn-outline btn-sm">
+                    <i class="fa-solid fa-plus"></i> Add Expense
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table id="expense-table" class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Expense Description</th>
+                        <th>Amount (₹)</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="expense-rows">
+                      <!-- Dynamically Populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Column 2: Financial Flows & Denominations -->
+          <div class="side-column">
+            
+            <!-- Other Transactions (UPI, Paytm, Credit) -->
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-money-bill-transfer icon-trans"></i>
+                  <h2>Digital & Credit Flows</h2>
+                </div>
+              </div>
+              <div class="card-body form-grid">
+                <div class="form-group">
+                  <label for="flow-paytm">
+                    <span>Paytm / UPI Payments (₹)</span>
+                    <i class="fa-solid fa-qrcode text-muted"></i>
+                  </label>
+                  <input type="number" id="flow-paytm" min="0" placeholder="0.00" class="form-control calc-trigger">
+                </div>
+                
+                <div class="form-group">
+                  <label for="flow-card">
+                    <span>Card Payments (₹)</span>
+                    <i class="fa-solid fa-credit-card text-muted"></i>
+                  </label>
+                  <input type="number" id="flow-card" min="0" placeholder="0.00" class="form-control calc-trigger">
+                </div>
+
+                <div class="form-group">
+                  <label for="flow-credit-sale">
+                    <span>Credit Sales (Today) (₹)</span>
+                    <i class="fa-solid fa-user-minus text-danger"></i>
+                  </label>
+                  <input type="number" id="flow-credit-sale" min="0" placeholder="0.00" class="form-control calc-trigger" title="Fuel/oil sold on credit today">
+                </div>
+
+                <div class="form-group">
+                  <label for="flow-credit-recv">
+                    <span>Credit Payments Received (₹)</span>
+                    <i class="fa-solid fa-user-plus text-success"></i>
+                  </label>
+                  <input type="number" id="flow-credit-recv" min="0" placeholder="0.00" class="form-control calc-trigger" title="Past credit dues collected in cash today">
+                </div>
+
+                <div class="form-group">
+                  <label for="flow-box-amount">
+                    <span>Yesterday's Box Cash (₹)</span>
+                    <i class="fa-solid fa-box-archive text-warning"></i>
+                  </label>
+                  <input type="number" id="flow-box-amount" min="0" placeholder="0.00" class="form-control calc-trigger" title="Small cash & coins carried forward from yesterday">
+                </div>
+              </div>
+            </div>
+
+            <!-- Actual Cash in Hand Section (Dual Mode) -->
+            <div class="dashboard-card" id="cash-counted-card">
+              <div class="card-header flex-col align-stretch gap-2 pb-0">
+                <div class="flex-between align-center">
+                  <div class="card-title">
+                    <i class="fa-solid fa-coins icon-coins"></i>
+                    <h2>Actual Cash in Hand</h2>
+                  </div>
+                  <button id="btn-clear-cash" class="btn-text">Clear</button>
+                </div>
+                
+                <!-- Toggle Mode Tabs -->
+                <div class="cash-mode-tabs">
+                  <button id="mode-quick" class="cash-tab active" type="button">
+                    <i class="fa-solid fa-layer-group"></i> Quick Bundles
+                  </button>
+                  <button id="mode-detailed" class="cash-tab" type="button">
+                    <i class="fa-solid fa-list-ol"></i> Note Counter
+                  </button>
+                </div>
+              </div>
+              
+              <div class="card-body">
+                <!-- MODE A: QUICK CASH BUNDLES -->
+                <div id="panel-quick-cash" class="cash-panel active">
+                  <p class="text-muted text-xs mb-3">Add cash packets, rubberbanded notes, or coin bags manually. They will sum automatically.</p>
+                  <div id="bundle-rows-container" class="bundle-rows-list">
+                    <!-- Dynamically Populated -->
+                  </div>
+                  <button id="btn-add-bundle" class="btn btn-outline btn-sm btn-block mt-3" type="button">
+                    <i class="fa-solid fa-plus"></i> Add Cash Bundle / Amount
+                  </button>
+                </div>
+
+                <!-- MODE B: DETAILED NOTE COUNTER -->
+                <div id="panel-detailed-cash" class="cash-panel">
+                  <p class="text-muted text-xs mb-3">Enter the counts of individual currency notes.</p>
+                  <div class="denomination-calculator">
+                    <div class="denom-row">
+                      <span class="denom-badge note-500">₹500</span>
+                      <span class="multiply">×</span>
+                      <input type="number" id="denom-500" min="0" placeholder="0" class="form-control denom-input">
+                      <span class="denom-result" id="res-500">₹0</span>
+                    </div>
+
+                    <div class="denom-row">
+                      <span class="denom-badge note-200">₹200</span>
+                      <span class="multiply">×</span>
+                      <input type="number" id="denom-200" min="0" placeholder="0" class="form-control denom-input">
+                      <span class="denom-result" id="res-200">₹0</span>
+                    </div>
+
+                    <div class="denom-row">
+                      <span class="denom-badge note-100">₹100</span>
+                      <span class="multiply">×</span>
+                      <input type="number" id="denom-100" min="0" placeholder="0" class="form-control denom-input">
+                      <span class="denom-result" id="res-100">₹0</span>
+                    </div>
+
+                    <div class="denom-row">
+                      <span class="denom-badge note-50">₹50</span>
+                      <span class="multiply">×</span>
+                      <input type="number" id="denom-50" min="0" placeholder="0" class="form-control denom-input">
+                      <span class="denom-result" id="res-50">₹0</span>
+                    </div>
+
+                    <div class="denom-row">
+                      <span class="denom-badge note-20">₹20</span>
+                      <span class="multiply">×</span>
+                      <input type="number" id="denom-20" min="0" placeholder="0" class="form-control denom-input">
+                      <span class="denom-result" id="res-20">₹0</span>
+                    </div>
+
+                    <div class="denom-row">
+                      <span class="denom-badge note-10">₹10</span>
+                      <span class="multiply">×</span>
+                      <input type="number" id="denom-10" min="0" placeholder="0" class="form-control denom-input">
+                      <span class="denom-result" id="res-10">₹0</span>
+                    </div>
+
+                    <div class="denom-row">
+                      <span class="denom-badge coins">Coins / Loose</span>
+                      <span class="multiply">+</span>
+                      <input type="number" id="denom-coins" min="0" placeholder="0.00" class="form-control denom-input">
+                      <span class="denom-result" id="res-coins">₹0</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Shared Total Bar -->
+                <div class="denom-total-bar mt-3 pt-3">
+                  <span>Actual Cash Counted:</span>
+                  <span class="denom-total-value text-primary" id="cash-calc-total">₹0.00</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Reconciliation Summary Panel -->
+            <div class="dashboard-card summary-card" id="summary-section">
+              <div class="card-header border-none">
+                <div class="card-title">
+                  <i class="fa-solid fa-chart-pie"></i>
+                  <h2>Day Reconciliation</h2>
+                </div>
+              </div>
+              <div class="card-body pt-0">
+                
+                <div class="summary-list">
+                  <div class="summary-item">
+                    <span class="summary-label">Total Fuel Sales</span>
+                    <span class="summary-value" id="sum-fuel-sales">₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Total Oil Sales</span>
+                    <span class="summary-value" id="sum-oil-sales">₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Credit Payments Collected</span>
+                    <span class="summary-value text-success" id="sum-credit-recv">+ ₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Yesterday's Box Amount</span>
+                    <span class="summary-value text-success" id="sum-box-in">+ ₹0.00</span>
+                  </div>
+                  
+                  <div class="summary-divider">Less Outflows & Payments</div>
+                  
+                  <div class="summary-item">
+                    <span class="summary-label">Digital Payments (Paytm/UPI & Cards)</span>
+                    <span class="summary-value text-danger" id="sum-digital">- ₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Credit Sales Today</span>
+                    <span class="summary-value text-danger" id="sum-credit-sale">- ₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Total Expenses Paid</span>
+                    <span class="summary-value text-danger" id="sum-expenses">- ₹0.00</span>
+                  </div>
+                  
+                  <div class="summary-net-bar">
+                    <span>Expected Cash in Hand</span>
+                    <span class="summary-net-value" id="sum-expected-cash">₹0.00</span>
+                  </div>
+
+                  <div class="summary-net-bar border-none pt-0">
+                    <span>Actual Cash Counted</span>
+                    <span class="summary-net-value text-primary" id="sum-actual-cash">₹0.00</span>
+                  </div>
+                </div>
+
+                <!-- Shortage/Excess Alert Area -->
+                <div class="variance-alert" id="variance-alert-box">
+                  <div class="variance-header">
+                    <span id="variance-label">Cash Match</span>
+                    <span class="variance-amount" id="variance-value">₹0.00</span>
+                  </div>
+                  <p class="variance-desc" id="variance-desc">All sales and digital collections balance perfectly with cash in hand.</p>
+                </div>
+
+                <!-- Carry Forward Box Input -->
+                <div class="form-group box-carry-group mt-3">
+                  <label for="carry-box-amount">
+                    <span>Carry Forward to Tomorrow's Box (₹)</span>
+                    <i class="fa-solid fa-arrow-right-long"></i>
+                  </label>
+                  <input type="number" id="carry-box-amount" min="0" placeholder="0.00" class="form-control" title="Amount to leave as change/coins in safe for tomorrow">
+                </div>
+
+                <div class="form-group mt-3">
+                  <label for="day-remarks">Remarks / Notes</label>
+                  <textarea id="day-remarks" class="form-control" rows="2" placeholder="Any fuel loss, credit account names, or expense explanations..."></textarea>
+                </div>
+
+                <div class="summary-actions">
+                  <button id="btn-save-log" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Today's Data
+                  </button>
+                  <button id="btn-print-pdf" class="btn btn-outline btn-block">
+                    <i class="fa-solid fa-file-pdf"></i> Print / Save PDF Summary
+                  </button>
+                  <button id="btn-reset-form" class="btn btn-text btn-block text-danger">
+                    <i class="fa-solid fa-trash-can"></i> Reset Form Fields
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- TAB 2: HISTORY LOGS VIEW -->
+      <section id="tab-history" class="tab-pane">
+        <div class="history-controls">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="history-search" placeholder="Search by date, nozzle, or remarks...">
+          </div>
+          <div class="history-actions">
+            <button id="btn-export-backup" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-download"></i> Export Data (JSON)
+            </button>
+            <button id="btn-import-backup" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-upload"></i> Import Data
+            </button>
+            <input type="file" id="import-file" style="display: none;" accept=".json">
+          </div>
+        </div>
+
+        <div class="dashboard-card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Fuel Sales</th>
+                    <th>Oil Sales</th>
+                    <th>Expenses</th>
+                    <th>Expected Cash</th>
+                    <th>Actual Cash</th>
+                    <th>Short/Excess</th>
+                    <th>Remarks</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-rows">
+                  <!-- Dynamically Populated -->
+                  <tr>
+                    <td colspan="9" class="text-center text-muted py-5">
+                      <i class="fa-regular fa-folder-open text-muted d-block mb-2 text-2xl"></i>
+                      No logs found. Create your first daily log entry.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: SETTINGS VIEW -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="settings-grid">
+          
+          <!-- Default Nozzle Configurations -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-circle-nodes"></i>
+                <h2>Default Nozzles</h2>
+              </div>
+              <div class="card-actions">
+                <button id="btn-settings-add-nozzle" class="btn btn-outline btn-sm">
+                  <i class="fa-solid fa-plus"></i> Add Default Nozzle
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-4">Manage nozzles that automatically load when you create a new daily entry.</p>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nozzle Name</th>
+                      <th>Default Rate (₹/L)</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="settings-nozzle-rows">
+                    <!-- Dynamically Populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Default Oil / Lubricant Catalog -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-oil-can"></i>
+                <h2>Default Lubricants Catalog</h2>
+              </div>
+              <div class="card-actions">
+                <button id="btn-settings-add-oil" class="btn btn-outline btn-sm">
+                  <i class="fa-solid fa-plus"></i> Add Default Oil
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-4">Manage oils & lubricants that auto-load or autocomplete for easier daily entry.</p>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Product Description</th>
+                      <th>Default Unit Price (₹)</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="settings-oil-rows">
+                    <!-- Dynamically Populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone & Reset -->
+          <div class="dashboard-card span-col-2">
+            <div class="card-header header-danger">
+              <div class="card-title text-danger">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h2>Danger Zone</h2>
+              </div>
+            </div>
+            <div class="card-body flex-between align-center">
+              <div>
+                <h4>Reset Application Data</h4>
+                <p class="text-muted">This will permanently delete all daily logs and restore settings to defaults. This action cannot be undone.</p>
+              </div>
+              <button id="btn-settings-clear-all" class="btn btn-danger">
+                <i class="fa-solid fa-trash-can"></i> Clear All Pump Data
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- PRINT-ONLY VIEW ELEMENT (HIDDEN BY DEFAULT) -->
+  <div id="print-report-container" class="print-only">
+    <!-- Header -->
+    <div class="print-header">
+      <div class="print-logo-section">
+        <h1>DAILY COLLECTION REPORT</h1>
+        <p class="print-pump-name">FUELFLOW SERVICE STATION</p>
+      </div>
+      <div class="print-date-section">
+        <p><strong>Date:</strong> <span id="print-date-val">--/--/----</span></p>
+        <p><strong>Printed On:</strong> <span id="print-time-val">--/--/---- --:--</span></p>
+      </div>
+    </div>
+
+    <!-- Nozzle Readings -->
+    <div class="print-section">
+      <h3>1. Fuel Sales & Readings</h3>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Nozzle Name</th>
+            <th class="text-right">Price (₹/L)</th>
+            <th class="text-right">Opening (L)</th>
+            <th class="text-right">Closing (L)</th>
+            <th class="text-right">Test (L)</th>
+            <th class="text-right">Net Qty (L)</th>
+            <th class="text-right">Amount (₹)</th>
+          </tr>
+        </thead>
+        <tbody id="print-nozzle-rows">
+          <!-- Populated in JS before printing -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Oil Sales & Expenses -->
+    <div class="print-row-grid">
+      <div class="print-col">
+        <h3>2. Oils & Lubricants</h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>Item Description</th>
+              <th class="text-right">Price (₹)</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Total (₹)</th>
+            </tr>
+          </thead>
+          <tbody id="print-oil-rows">
+            <!-- Populated in JS before printing -->
+          </tbody>
+        </table>
+      </div>
+      <div class="print-col">
+        <h3>3. Daily Expenses</h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>Expense Description</th>
+              <th class="text-right">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody id="print-expense-rows">
+            <!-- Populated in JS before printing -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cash Reconciliation & Flows -->
+    <div class="print-section">
+      <h3>4. Collection & Cash Reconciliation</h3>
+      <div class="print-flow-summary">
+        <div class="print-summary-card">
+          <h4>Receipts & Inflows</h4>
+          <table class="print-mini-table">
+            <tr>
+              <td>Fuel Sales Total</td>
+              <td class="text-right" id="print-sum-fuel">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Oil Sales Total</td>
+              <td class="text-right" id="print-sum-oil">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Yesterday's Box Amount</td>
+              <td class="text-right" id="print-sum-box-in">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Credit Payments Received</td>
+              <td class="text-right" id="print-sum-credit-recv">₹0.00</td>
+            </tr>
+            <tr class="print-total-row">
+              <td><strong>Total Cash Inflows</strong></td>
+              <td class="text-right"><strong id="print-total-inflows">₹0.00</strong></td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="print-summary-card">
+          <h4>Deductions & Outflows</h4>
+          <table class="print-mini-table">
+            <tr>
+              <td>Paytm / UPI Payments</td>
+              <td class="text-right" id="print-sum-paytm">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Card Payments</td>
+              <td class="text-right" id="print-sum-card">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Credit Sales Today</td>
+              <td class="text-right" id="print-sum-credit-sale">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Expenses Total</td>
+              <td class="text-right" id="print-sum-expenses">₹0.00</td>
+            </tr>
+            <tr class="print-total-row">
+              <td><strong>Total Deductions</strong></td>
+              <td class="text-right"><strong id="print-total-outflows">₹0.00</strong></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reconciliation Totals -->
+    <div class="print-section print-final-section">
+      <div class="print-recon-totals">
+        <div class="print-recon-item">
+          <span>Expected Cash in Hand:</span>
+          <strong id="print-expected-cash">₹0.00</strong>
+        </div>
+        <div class="print-recon-item">
+          <span>Actual Cash Counted:</span>
+          <strong id="print-actual-cash">₹0.00</strong>
+        </div>
+        <div class="print-recon-item highlighted">
+          <span>Cash Variance (Short/Excess):</span>
+          <strong id="print-variance">₹0.00</strong>
+        </div>
+      </div>
+
+      <div class="print-denomination-summary">
+        <h4>Cash Denomination Details</h4>
+        <div class="print-denom-grid" id="print-denom-grid">
+          <!-- Populated in JS -->
+        </div>
+      </div>
+
+      <div class="print-meta-fields">
+        <div>
+          <p><strong>Carry Forward Box Cash:</strong> <span id="print-carry-box">₹0.00</span></p>
+          <p><strong>Remarks/Notes:</strong></p>
+          <div class="print-remarks-box" id="print-remarks">--</div>
+        </div>
+      </div>
+
+      <!-- Signatures -->
+      <div class="print-signatures">
+        <div class="signature-line">
+          <p>Prepared By (Pump Operator)</p>
+        </div>
+        <div class="signature-line">
+          <p>Verified By (Manager / Owner)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Javascript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
