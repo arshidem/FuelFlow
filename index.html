@@ -156,6 +156,7 @@
                     <thead>
                       <tr>
                         <th>Item Description</th>
+                        <th>Nozzle / Cash Box</th>
                         <th>Unit Price (₹)</th>
                         <th>Quantity</th>
                         <th>Total Amount (₹)</th>
@@ -189,6 +190,7 @@
                     <thead>
                       <tr>
                         <th>Expense Description</th>
+                        <th>Nozzle / Cash Box</th>
                         <th>Amount (₹)</th>
                         <th>Actions</th>
                       </tr>
@@ -206,6 +208,22 @@
           <!-- Column 2: Financial Flows & Denominations -->
           <div class="side-column">
             
+            <!-- Active Nozzle Selection Filter -->
+            <div class="dashboard-card" style="margin-bottom: 1rem;">
+              <div class="card-body" style="padding: 1rem;">
+                <div class="form-group mb-0">
+                  <label for="active-nozzle-filter" style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 0.5rem;">
+                    <span>Reconciliation Target (Nozzle/Operator)</span>
+                    <i class="fa-solid fa-user-gear text-primary"></i>
+                  </label>
+                  <select id="active-nozzle-filter" class="form-control" style="width: 100%;">
+                    <option value="all">All Nozzles (Merged View)</option>
+                    <option value="general">General / Unassigned</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <!-- Other Transactions (UPI, Paytm, Credit) -->
             <div class="dashboard-card">
               <div class="card-header">
@@ -225,7 +243,7 @@
 
                 <div class="form-group">
                   <label for="flow-yesterday-paytm">
-                    <i class="fa-solid fa-history text-danger"></i>
+                   <span>Yesterday Paytm (8 PM - 9 PM)</span>
                   </label>
                   <input type="number" id="flow-yesterday-paytm" min="0" placeholder="0.00" class="form-control calc-trigger" title="Paytm payments received yesterday after 8 PM closing readings, to be reduced from today's expected cash.">
                 </div>
@@ -260,6 +278,14 @@
                     <i class="fa-solid fa-box-archive text-warning"></i>
                   </label>
                   <input type="number" id="flow-box-amount" min="0" placeholder="0.00" class="form-control calc-trigger" title="Small cash & coins carried forward from yesterday">
+                </div>
+
+                <div class="form-group">
+                  <label for="flow-office-cash">
+                    <span>Cash Sent to Office (₹)</span>
+                    <i class="fa-solid fa-building-columns text-danger"></i>
+                  </label>
+                  <input type="number" id="flow-office-cash" min="0" placeholder="0.00" class="form-control calc-trigger" title="Cash taken/sent to office — reduces expected cash in hand">
                 </div>
               </div>
             </div>
@@ -397,8 +423,8 @@
                     <span class="summary-value text-danger" id="sum-digital">- ₹0.00</span>
                   </div>
                   <div class="summary-item">
-                    <span class="summary-label">Less: Yesterday Paytm (8 PM - 9 PM)</span>
-                    <span class="summary-value text-success" id="sum-yesterday-paytm">+ ₹0.00</span>
+                    <span class="summary-label">Yesterday Paytm (8 PM - 9 PM)</span>
+                    <span class="summary-value text-danger" id="sum-yesterday-paytm">- ₹0.00</span>
                   </div>
                   <div class="summary-item">
                     <span class="summary-label">Credit Sales Today</span>
@@ -407,6 +433,10 @@
                   <div class="summary-item">
                     <span class="summary-label">Total Expenses Paid</span>
                     <span class="summary-value text-danger" id="sum-expenses">- ₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Cash Sent to Office</span>
+                    <span class="summary-value text-danger" id="sum-office-cash">- ₹0.00</span>
                   </div>
                   
                   <div class="summary-net-bar">
@@ -699,10 +729,6 @@
               <td>Credit Payments Received</td>
               <td class="text-right" id="print-sum-credit-recv">₹0.00</td>
             </tr>
-            <tr>
-              <td>Less: Yesterday Paytm (8–9 PM)</td>
-              <td class="text-right" id="print-sum-yesterday-paytm">₹0.00</td>
-            </tr>
             <tr class="print-total-row">
               <td><strong>Total Cash Inflows</strong></td>
               <td class="text-right"><strong id="print-total-inflows">₹0.00</strong></td>
@@ -718,6 +744,10 @@
               <td class="text-right" id="print-sum-paytm">₹0.00</td>
             </tr>
             <tr>
+              <td>Yesterday Paytm (8 PM - 9 PM)</td>
+              <td class="text-right" id="print-sum-yesterday-paytm">₹0.00</td>
+            </tr>
+            <tr>
               <td>Card Payments</td>
               <td class="text-right" id="print-sum-card">₹0.00</td>
             </tr>
@@ -728,6 +758,10 @@
             <tr>
               <td>Expenses Total</td>
               <td class="text-right" id="print-sum-expenses">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Cash Sent to Office</td>
+              <td class="text-right" id="print-sum-office-cash">₹0.00</td>
             </tr>
             <tr class="print-total-row">
               <td><strong>Total Deductions</strong></td>
@@ -782,21 +816,10 @@
     </div>
   </div>
 
+  <!-- html2pdf Library for Direct PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- Javascript Logic -->
   <script src="app.js"></script>
-  <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('[PWA] Service Worker registered with scope:', registration.scope);
-          })
-          .catch((error) => {
-            console.log('[PWA] Service Worker registration failed:', error);
-          });
-      });
-    }
-  </script>
+
 </body>
 </html>

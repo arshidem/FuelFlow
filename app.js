@@ -12,6 +12,8 @@ let appState = {
   nozzles: [],
   oils: [],
   expenses: [],
+  activeNozzleFilter: 'all',
+  flowsByNozzle: {},
   
   flows: {
     paytm: 0,
@@ -21,7 +23,8 @@ let appState = {
     creditRecv: 0,
     boxAmount: 0,
     carryBoxAmount: 0,
-    remarks: ''
+    remarks: '',
+    officeCash: 0
   },
   
   denominations: {
@@ -329,6 +332,164 @@ function loadDayData(dateStr) {
   calculateReconciliation();
 }
 
+// -------------------------------------------------------------
+// NOZZLE-WISE FINANCIAL TRACKING & PERSISTENCE HELPERS
+// -------------------------------------------------------------
+function ensureNozzleFlowsState(nozzleId) {
+  if (!appState.flowsByNozzle) {
+    appState.flowsByNozzle = {};
+  }
+  if (!appState.flowsByNozzle[nozzleId]) {
+    appState.flowsByNozzle[nozzleId] = {
+      flows: {
+        paytm: 0,
+        yesterdayPaytm: 0,
+        card: 0,
+        creditSale: 0,
+        creditRecv: 0,
+        boxAmount: 0,
+        carryBoxAmount: 0,
+        remarks: '',
+        officeCash: 0
+      },
+      denominations: {
+        n500: 0,
+        n200: 0,
+        n100: 0,
+        n50: 0,
+        n20: 0,
+        n10: 0,
+        coins: 0
+      },
+      cashMode: 'bundles',
+      cashBundles: [
+        { id: 'b_' + Date.now() + '_0', amount: 0 },
+        { id: 'b_' + Date.now() + '_1', amount: 0 }
+      ]
+    };
+  }
+}
+
+function updateActiveNozzleFilterOptions() {
+  const filterSelect = document.getElementById('active-nozzle-filter');
+  if (!filterSelect) return;
+  
+  const currentValue = filterSelect.value || 'all';
+  
+  filterSelect.innerHTML = `
+    <option value="all">All Nozzles (Merged View)</option>
+    <option value="general">General / Unassigned</option>
+  `;
+  
+  appState.nozzles.forEach(nozzle => {
+    filterSelect.innerHTML += `<option value="${nozzle.id}">${nozzle.name}</option>`;
+  });
+  
+  // Restore value if it still exists
+  if ([...filterSelect.options].some(opt => opt.value === currentValue)) {
+    filterSelect.value = currentValue;
+  } else {
+    filterSelect.value = 'all';
+    appState.activeNozzleFilter = 'all';
+  }
+}
+
+function setFlowsAndCashInputsReadOnly(isReadOnly) {
+  const inputs = document.querySelectorAll('.calc-trigger, .denom-input, #carry-box-amount, #day-remarks');
+  inputs.forEach(input => {
+    input.readOnly = isReadOnly;
+    if (input.tagName === 'TEXTAREA') {
+      input.readOnly = isReadOnly;
+    }
+  });
+  // Disable add/clear buttons in cash counted section if read-only
+  const btnAddBundle = document.getElementById('btn-add-bundle');
+  const btnClearCash = document.getElementById('btn-clear-cash');
+  if (btnAddBundle) btnAddBundle.disabled = isReadOnly;
+  if (btnClearCash) btnClearCash.disabled = isReadOnly;
+
+  // Visual feedback for read-only mode in cash counted switch tabs
+  const modeQuick = document.getElementById('mode-quick');
+  const modeDetailed = document.getElementById('mode-detailed');
+  if (modeQuick && modeDetailed) {
+    if (isReadOnly) {
+      modeQuick.style.pointerEvents = 'none';
+      modeDetailed.style.pointerEvents = 'none';
+      modeQuick.style.opacity = '0.6';
+      modeDetailed.style.opacity = '0.6';
+    } else {
+      modeQuick.style.pointerEvents = 'auto';
+      modeDetailed.style.pointerEvents = 'auto';
+      modeQuick.style.opacity = '1';
+      modeDetailed.style.opacity = '1';
+    }
+  }
+}
+
+function mergeAllNozzlesToRoot() {
+  const sumFlows = {
+    paytm: 0, yesterdayPaytm: 0, card: 0, creditSale: 0, creditRecv: 0, boxAmount: 0, carryBoxAmount: 0, remarks: '', officeCash: 0
+  };
+  const sumDenoms = {
+    n500: 0, n200: 0, n100: 0, n50: 0, n20: 0, n10: 0, coins: 0
+  };
+  
+  let mergedBundles = [];
+  let allRemarks = [];
+  
+  if (!appState.flowsByNozzle) appState.flowsByNozzle = {};
+  
+  ensureNozzleFlowsState('general');
+  
+  // Collect all nozzle flows, plus general
+  const keys = ['general', ...appState.nozzles.map(n => n.id)];
+  
+  keys.forEach(key => {
+    ensureNozzleFlowsState(key);
+    const item = appState.flowsByNozzle[key];
+    sumFlows.paytm += item.flows.paytm || 0;
+    sumFlows.yesterdayPaytm += item.flows.yesterdayPaytm || 0;
+    sumFlows.card += item.flows.card || 0;
+    sumFlows.creditSale += item.flows.creditSale || 0;
+    sumFlows.creditRecv += item.flows.creditRecv || 0;
+    sumFlows.boxAmount += item.flows.boxAmount || 0;
+    sumFlows.carryBoxAmount += item.flows.carryBoxAmount || 0;
+    sumFlows.officeCash += item.flows.officeCash || 0;
+    
+    sumDenoms.n500 += item.denominations.n500 || 0;
+    sumDenoms.n200 += item.denominations.n200 || 0;
+    sumDenoms.n100 += item.denominations.n100 || 0;
+    sumDenoms.n50 += item.denominations.n50 || 0;
+    sumDenoms.n20 += item.denominations.n20 || 0;
+    sumDenoms.n10 += item.denominations.n10 || 0;
+    sumDenoms.coins += item.denominations.coins || 0;
+    
+    if (item.flows.remarks && item.flows.remarks.trim()) {
+      const nozzleObj = appState.nozzles.find(n => n.id === key);
+      const prefix = nozzleObj ? `${nozzleObj.name}: ` : (key === 'general' ? 'General: ' : `${key}: `);
+      allRemarks.push(prefix + item.flows.remarks.trim());
+    }
+    
+    if (item.cashBundles) {
+      const nozzleObj = appState.nozzles.find(n => n.id === key);
+      const label = nozzleObj ? nozzleObj.name : 'General';
+      const annotated = item.cashBundles.map(b => ({
+        id: b.id,
+        amount: b.amount,
+        annotatedLabel: label
+      }));
+      mergedBundles = mergedBundles.concat(annotated);
+    }
+  });
+  
+  sumFlows.remarks = allRemarks.join(' | ');
+  
+  appState.flows = sumFlows;
+  appState.denominations = sumDenoms;
+  appState.cashMode = 'bundles'; // Force bundles view in merged mode
+  appState.cashBundles = mergedBundles;
+}
+
 function initializeFreshDayTemplate() {
   // Map settings to dynamic rows
   appState.nozzles = appState.settings.defaultNozzles.map((nozzle, index) => ({
@@ -347,7 +508,8 @@ function initializeFreshDayTemplate() {
     description: oil.description,
     price: oil.price,
     quantity: 0,
-    total: 0
+    total: 0,
+    nozzleId: 'general'
   }));
   
   appState.expenses = [];
@@ -360,32 +522,23 @@ function initializeFreshDayTemplate() {
     startingBoxCash = yesterdayLog.flows.carryBoxAmount;
   }
   
-  appState.flows = {
-    paytm: 0,
-    yesterdayPaytm: 0,
-    card: 0,
-    creditSale: 0,
-    creditRecv: 0,
-    boxAmount: startingBoxCash,
-    carryBoxAmount: 0,
-    remarks: ''
-  };
+  appState.activeNozzleFilter = 'all';
+  appState.flowsByNozzle = {};
   
-  appState.denominations = {
-    n500: 0,
-    n200: 0,
-    n100: 0,
-    n50: 0,
-    n20: 0,
-    n10: 0,
-    coins: 0
-  };
+  // Initialize general and specific nozzle states
+  ensureNozzleFlowsState('general');
+  appState.flowsByNozzle['general'].flows.boxAmount = startingBoxCash;
   
-  appState.cashMode = 'bundles';
-  appState.cashBundles = [
-    { id: 'b_' + Date.now() + '_0', amount: 0 },
-    { id: 'b_' + Date.now() + '_1', amount: 0 }
-  ];
+  appState.nozzles.forEach(nozzle => {
+    ensureNozzleFlowsState(nozzle.id);
+  });
+  
+  // Build merged root values
+  mergeAllNozzlesToRoot();
+  
+  // Update target filter dropdown UI
+  updateActiveNozzleFilterOptions();
+  setFlowsAndCashInputsReadOnly(true);
 }
 
 function fillFlowsInputs() {
@@ -396,6 +549,7 @@ function fillFlowsInputs() {
   document.getElementById('flow-credit-recv').value = appState.flows.creditRecv || '';
   document.getElementById('flow-box-amount').value = appState.flows.boxAmount || '';
   document.getElementById('carry-box-amount').value = appState.flows.carryBoxAmount || '';
+  document.getElementById('flow-office-cash').value = appState.flows.officeCash || '';
   document.getElementById('day-remarks').value = appState.flows.remarks || '';
 }
 
@@ -416,6 +570,7 @@ function updateFlowsStateFromUI() {
   appState.flows.creditSale = parseFloat(document.getElementById('flow-credit-sale').value) || 0;
   appState.flows.creditRecv = parseFloat(document.getElementById('flow-credit-recv').value) || 0;
   appState.flows.boxAmount = parseFloat(document.getElementById('flow-box-amount').value) || 0;
+  appState.flows.officeCash = parseFloat(document.getElementById('flow-office-cash').value) || 0;
 }
 
 function updateDenominationsStateFromUI() {
@@ -671,36 +826,42 @@ function calculateReconciliation() {
   document.getElementById('sum-oil-sales').innerText = `₹${formatCurrency(oilSalesTotal)}`;
   
   // C. Inflows Additions
-  const creditRecv = appState.flows.creditRecv;
+  const creditRecv = appState.flows.creditRecv || 0;
   document.getElementById('sum-credit-recv').innerText = `+ ₹${formatCurrency(creditRecv)}`;
-  const boxIn = appState.flows.boxAmount;
+  const boxIn = appState.flows.boxAmount || 0;
   document.getElementById('sum-box-in').innerText = `+ ₹${formatCurrency(boxIn)}`;
   
   // D. Deductions
-  const digitalPayments = appState.flows.paytm + appState.flows.card;
+  const digitalPayments = (appState.flows.paytm || 0) + (appState.flows.card || 0);
   document.getElementById('sum-digital').innerText = `- ₹${formatCurrency(digitalPayments)}`;
   
-  // Yesterday's Paytm (8 PM - 9 PM): reduces from today's digital deductions (credit back)
-  // These payments are included in today's Paytm machine total but belong to yesterday's shift,
-  // so we add them back to expected cash (they were already handled yesterday).
-  const yesterdayPaytm = appState.flows.yesterdayPaytm;
+  // Yesterday's Paytm (8 PM - 9 PM):
+  // Since reading is yesterday 8 PM to today 8 PM, yesterday's Paytm payments after 8 PM
+  // correspond to sales included in today's shift but received digitally, so they must be deducted.
+  const yesterdayPaytm = appState.flows.yesterdayPaytm || 0;
   const sumYesterdayEl = document.getElementById('sum-yesterday-paytm');
   if (sumYesterdayEl) {
-    sumYesterdayEl.innerText = yesterdayPaytm > 0 ? `+ ₹${formatCurrency(yesterdayPaytm)}` : `₹0.00`;
-    sumYesterdayEl.className = yesterdayPaytm > 0 ? 'summary-value text-success' : 'summary-value text-muted';
+    sumYesterdayEl.innerText = yesterdayPaytm > 0 ? `- ₹${formatCurrency(yesterdayPaytm)}` : `₹0.00`;
+    sumYesterdayEl.className = yesterdayPaytm > 0 ? 'summary-value text-danger' : 'summary-value text-muted';
   }
   
-  const creditSaleToday = appState.flows.creditSale;
+  const creditSaleToday = appState.flows.creditSale || 0;
   document.getElementById('sum-credit-sale').innerText = `- ₹${formatCurrency(creditSaleToday)}`;
   
   const expensesTotal = appState.expenses.reduce((sum, e) => sum + e.amount, 0);
   document.getElementById('sum-expenses').innerText = `- ₹${formatCurrency(expensesTotal)}`;
   
+  const officeCash = appState.flows.officeCash || 0;
+  const sumOfficeCashEl = document.getElementById('sum-office-cash');
+  if (sumOfficeCashEl) {
+    sumOfficeCashEl.innerText = officeCash > 0 ? `- ₹${formatCurrency(officeCash)}` : `₹0.00`;
+    sumOfficeCashEl.className = officeCash > 0 ? 'summary-value text-danger' : 'summary-value text-muted';
+  }
+  
   // E. Expected Cash in Hand calculation
-  // Expected = (Fuel + Oils + CreditRecv + BoxIn + YesterdayPaytm) - (Digital + CreditSale + Expenses)
-  // YesterdayPaytm is added BACK because it shows in today's Paytm machine total but was already
-  // settled from yesterday's cash — we shouldn't deduct it again from today's expected cash.
-  const expectedCash = (fuelSalesTotal + oilSalesTotal + creditRecv + boxIn + yesterdayPaytm) - (digitalPayments + creditSaleToday + expensesTotal);
+  // Expected = (Fuel + Oils + CreditRecv + BoxIn) - (Digital + CreditSale + Expenses + OfficeCash + YesterdayPaytm)
+  // Yesterday's Paytm (8 PM - 9 PM) is deducted because those sales are included in today's readings but were paid digitally.
+  const expectedCash = (fuelSalesTotal + oilSalesTotal + creditRecv + boxIn) - (digitalPayments + creditSaleToday + expensesTotal + officeCash + yesterdayPaytm);
   document.getElementById('sum-expected-cash').innerText = `₹${formatCurrency(expectedCash)}`;
   
   // F. Actual Cash Counted (Denominations or Quick Bundles)
@@ -1139,9 +1300,10 @@ function populatePrintTemplate(logData) {
   const digitalCard = logData.flows.card;
   const creditSaleToday = logData.flows.creditSale;
   const totalExp = logData.expenses ? logData.expenses.reduce((sum, e) => sum + e.amount, 0) : 0;
+  const officeCash = logData.flows.officeCash || 0;
 
-  const totalInflows = fuelSales + oilSales + boxIn + creditRecv + yesterdayPaytm;
-  const totalOutflows = digitalPaytm + digitalCard + creditSaleToday + totalExp;
+  const totalInflows = fuelSales + oilSales + boxIn + creditRecv;
+  const totalOutflows = digitalPaytm + digitalCard + creditSaleToday + totalExp + officeCash + yesterdayPaytm;
   const expectedCash = totalInflows - totalOutflows;
 
   // Actual Cash calc
@@ -1174,6 +1336,8 @@ function populatePrintTemplate(logData) {
   document.getElementById('print-sum-card').innerText = `₹${formatCurrency(digitalCard)}`;
   document.getElementById('print-sum-credit-sale').innerText = `₹${formatCurrency(creditSaleToday)}`;
   document.getElementById('print-sum-expenses').innerText = `₹${formatCurrency(totalExp)}`;
+  const printOfficeCashEl = document.getElementById('print-sum-office-cash');
+  if (printOfficeCashEl) printOfficeCashEl.innerText = officeCash > 0 ? `₹${formatCurrency(officeCash)}` : '—';
   document.getElementById('print-total-outflows').innerText = `₹${formatCurrency(totalOutflows)}`;
 
   document.getElementById('print-expected-cash').innerText = `₹${formatCurrency(expectedCash)}`;
