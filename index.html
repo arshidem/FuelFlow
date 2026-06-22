@@ -222,6 +222,13 @@
                   </label>
                   <input type="number" id="flow-paytm" min="0" placeholder="0.00" class="form-control calc-trigger">
                 </div>
+
+                <div class="form-group">
+                  <label for="flow-yesterday-paytm">
+                    <i class="fa-solid fa-history text-danger"></i>
+                  </label>
+                  <input type="number" id="flow-yesterday-paytm" min="0" placeholder="0.00" class="form-control calc-trigger" title="Paytm payments received yesterday after 8 PM closing readings, to be reduced from today's expected cash.">
+                </div>
                 
                 <div class="form-group">
                   <label for="flow-card">
@@ -388,6 +395,10 @@
                   <div class="summary-item">
                     <span class="summary-label">Digital Payments (Paytm/UPI & Cards)</span>
                     <span class="summary-value text-danger" id="sum-digital">- ₹0.00</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Less: Yesterday Paytm (8 PM - 9 PM)</span>
+                    <span class="summary-value text-success" id="sum-yesterday-paytm">+ ₹0.00</span>
                   </div>
                   <div class="summary-item">
                     <span class="summary-label">Credit Sales Today</span>
@@ -687,6 +698,10 @@
             <tr>
               <td>Credit Payments Received</td>
               <td class="text-right" id="print-sum-credit-recv">₹0.00</td>
+            </tr>
+            <tr>
+              <td>Less: Yesterday Paytm (8–9 PM)</td>
+              <td class="text-right" id="print-sum-yesterday-paytm">₹0.00</td>
             </tr>
             <tr class="print-total-row">
               <td><strong>Total Cash Inflows</strong></td>

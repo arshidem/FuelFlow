@@ -518,6 +518,11 @@ body {
   font-weight: 500;
   outline: none;
   transition: border-color var(--transition-speed);
+  text-align: left;
+}
+
+.data-table input.form-control-inline::placeholder {
+  text-align: left;
 }
 
 .data-table input.form-control-inline:focus {
@@ -588,6 +593,11 @@ body {
   font-weight: 500;
   outline: none;
   transition: all var(--transition-speed);
+  text-align: left;
+}
+
+.form-control::placeholder {
+  text-align: left;
 }
 
 .form-control:focus {
@@ -640,7 +650,7 @@ body {
   flex-grow: 1;
   padding: 0.45rem 0.75rem;
   font-size: 0.85rem;
-  text-align: right;
+  text-align: left;
   border-radius: var(--border-radius-sm);
 }
 

@@ -15,6 +15,7 @@ let appState = {
   
   flows: {
     paytm: 0,
+    yesterdayPaytm: 0,
     card: 0,
     creditSale: 0,
     creditRecv: 0,
@@ -361,6 +362,7 @@ function initializeFreshDayTemplate() {
   
   appState.flows = {
     paytm: 0,
+    yesterdayPaytm: 0,
     card: 0,
     creditSale: 0,
     creditRecv: 0,
@@ -388,6 +390,7 @@ function initializeFreshDayTemplate() {
 
 function fillFlowsInputs() {
   document.getElementById('flow-paytm').value = appState.flows.paytm || '';
+  document.getElementById('flow-yesterday-paytm').value = appState.flows.yesterdayPaytm || '';
   document.getElementById('flow-card').value = appState.flows.card || '';
   document.getElementById('flow-credit-sale').value = appState.flows.creditSale || '';
   document.getElementById('flow-credit-recv').value = appState.flows.creditRecv || '';
@@ -408,6 +411,7 @@ function fillDenominationsInputs() {
 
 function updateFlowsStateFromUI() {
   appState.flows.paytm = parseFloat(document.getElementById('flow-paytm').value) || 0;
+  appState.flows.yesterdayPaytm = parseFloat(document.getElementById('flow-yesterday-paytm').value) || 0;
   appState.flows.card = parseFloat(document.getElementById('flow-card').value) || 0;
   appState.flows.creditSale = parseFloat(document.getElementById('flow-credit-sale').value) || 0;
   appState.flows.creditRecv = parseFloat(document.getElementById('flow-credit-recv').value) || 0;
@@ -440,16 +444,16 @@ function renderNozzlesTable() {
         <input type="text" class="form-control-inline text-bold" value="${nozzle.name}" onchange="updateNozzleField('${nozzle.id}', 'name', this.value)">
       </td>
       <td class="col-rate" data-label="Rate (₹/L)">
-        <input type="number" step="0.01" class="form-control-inline text-right" value="${nozzle.rate}" oninput="updateNozzleField('${nozzle.id}', 'rate', this.value)">
+        <input type="number" step="0.01" class="form-control-inline" value="${nozzle.rate}" oninput="updateNozzleField('${nozzle.id}', 'rate', this.value)">
       </td>
       <td class="col-opening" data-label="Opening (L)">
-        <input type="number" step="0.01" class="form-control-inline text-right" value="${nozzle.opening || ''}" placeholder="0.00" oninput="updateNozzleField('${nozzle.id}', 'opening', this.value)">
+        <input type="number" step="0.01" class="form-control-inline" value="${nozzle.opening || ''}" placeholder="0.00" oninput="updateNozzleField('${nozzle.id}', 'opening', this.value)">
       </td>
       <td class="col-closing" data-label="Closing (L)">
-        <input type="number" step="0.01" class="form-control-inline text-right" value="${nozzle.closing || ''}" placeholder="0.00" oninput="updateNozzleField('${nozzle.id}', 'closing', this.value)">
+        <input type="number" step="0.01" class="form-control-inline" value="${nozzle.closing || ''}" placeholder="0.00" oninput="updateNozzleField('${nozzle.id}', 'closing', this.value)">
       </td>
       <td class="col-testing" data-label="Testing (L)">
-        <input type="number" step="0.01" class="form-control-inline text-right" value="${nozzle.testing || ''}" placeholder="0.00" oninput="updateNozzleField('${nozzle.id}', 'testing', this.value)">
+        <input type="number" step="0.01" class="form-control-inline" value="${nozzle.testing || ''}" placeholder="0.00" oninput="updateNozzleField('${nozzle.id}', 'testing', this.value)">
       </td>
       <td class="col-net text-right text-bold" data-label="Net Qty (L)">
         <span id="net-${nozzle.id}">${nozzle.net.toFixed(2)}</span>
@@ -537,10 +541,10 @@ function renderOilsTable() {
         <input type="text" class="form-control-inline text-bold" value="${oil.description}" placeholder="e.g. Engine Oil 4T" onchange="updateOilField('${oil.id}', 'description', this.value)">
       </td>
       <td class="col-price" data-label="Price (₹)">
-        <input type="number" step="0.01" class="form-control-inline text-right" value="${oil.price}" oninput="updateOilField('${oil.id}', 'price', this.value)">
+        <input type="number" step="0.01" class="form-control-inline" value="${oil.price}" oninput="updateOilField('${oil.id}', 'price', this.value)">
       </td>
       <td class="col-qty" data-label="Quantity">
-        <input type="number" step="1" class="form-control-inline text-right" value="${oil.quantity || ''}" placeholder="0" oninput="updateOilField('${oil.id}', 'quantity', this.value)">
+        <input type="number" step="1" class="form-control-inline" value="${oil.quantity || ''}" placeholder="0" oninput="updateOilField('${oil.id}', 'quantity', this.value)">
       </td>
       <td class="col-total text-right text-bold text-primary" data-label="Total Amount (₹)">
         <span id="oiltot-${oil.id}">₹${formatCurrency(oil.total)}</span>
@@ -612,7 +616,7 @@ function renderExpensesTable() {
         <input type="text" class="form-control-inline" value="${exp.description}" placeholder="e.g. Staff Tea / Calibration Testing" onchange="updateExpenseField('${exp.id}', 'description', this.value)">
       </td>
       <td class="col-amount" data-label="Amount (₹)">
-        <input type="number" step="0.01" class="form-control-inline text-right text-bold text-danger" value="${exp.amount || ''}" placeholder="0.00" oninput="updateExpenseField('${exp.id}', 'amount', this.value)">
+        <input type="number" step="0.01" class="form-control-inline text-bold text-danger" value="${exp.amount || ''}" placeholder="0.00" oninput="updateExpenseField('${exp.id}', 'amount', this.value)">
       </td>
       <td class="col-actions text-center" data-label="Actions">
         <button class="btn-icon delete-btn" onclick="deleteExpenseRow('${exp.id}')" title="Delete Row">
@@ -676,6 +680,16 @@ function calculateReconciliation() {
   const digitalPayments = appState.flows.paytm + appState.flows.card;
   document.getElementById('sum-digital').innerText = `- ₹${formatCurrency(digitalPayments)}`;
   
+  // Yesterday's Paytm (8 PM - 9 PM): reduces from today's digital deductions (credit back)
+  // These payments are included in today's Paytm machine total but belong to yesterday's shift,
+  // so we add them back to expected cash (they were already handled yesterday).
+  const yesterdayPaytm = appState.flows.yesterdayPaytm;
+  const sumYesterdayEl = document.getElementById('sum-yesterday-paytm');
+  if (sumYesterdayEl) {
+    sumYesterdayEl.innerText = yesterdayPaytm > 0 ? `+ ₹${formatCurrency(yesterdayPaytm)}` : `₹0.00`;
+    sumYesterdayEl.className = yesterdayPaytm > 0 ? 'summary-value text-success' : 'summary-value text-muted';
+  }
+  
   const creditSaleToday = appState.flows.creditSale;
   document.getElementById('sum-credit-sale').innerText = `- ₹${formatCurrency(creditSaleToday)}`;
   
@@ -683,8 +697,10 @@ function calculateReconciliation() {
   document.getElementById('sum-expenses').innerText = `- ₹${formatCurrency(expensesTotal)}`;
   
   // E. Expected Cash in Hand calculation
-  // Expected = (Fuel + Oils + CreditRecv + BoxIn) - (Digital + CreditSale + Expenses)
-  const expectedCash = (fuelSalesTotal + oilSalesTotal + creditRecv + boxIn) - (digitalPayments + creditSaleToday + expensesTotal);
+  // Expected = (Fuel + Oils + CreditRecv + BoxIn + YesterdayPaytm) - (Digital + CreditSale + Expenses)
+  // YesterdayPaytm is added BACK because it shows in today's Paytm machine total but was already
+  // settled from yesterday's cash — we shouldn't deduct it again from today's expected cash.
+  const expectedCash = (fuelSalesTotal + oilSalesTotal + creditRecv + boxIn + yesterdayPaytm) - (digitalPayments + creditSaleToday + expensesTotal);
   document.getElementById('sum-expected-cash').innerText = `₹${formatCurrency(expectedCash)}`;
   
   // F. Actual Cash Counted (Denominations or Quick Bundles)
@@ -1117,13 +1133,14 @@ function populatePrintTemplate(logData) {
   const oilSales = logData.oils ? logData.oils.reduce((sum, o) => sum + o.total, 0) : 0;
   const boxIn = logData.flows.boxAmount;
   const creditRecv = logData.flows.creditRecv;
+  const yesterdayPaytm = logData.flows.yesterdayPaytm || 0;
   
   const digitalPaytm = logData.flows.paytm;
   const digitalCard = logData.flows.card;
   const creditSaleToday = logData.flows.creditSale;
   const totalExp = logData.expenses ? logData.expenses.reduce((sum, e) => sum + e.amount, 0) : 0;
 
-  const totalInflows = fuelSales + oilSales + boxIn + creditRecv;
+  const totalInflows = fuelSales + oilSales + boxIn + creditRecv + yesterdayPaytm;
   const totalOutflows = digitalPaytm + digitalCard + creditSaleToday + totalExp;
   const expectedCash = totalInflows - totalOutflows;
 
@@ -1149,6 +1166,8 @@ function populatePrintTemplate(logData) {
   document.getElementById('print-sum-oil').innerText = `₹${formatCurrency(oilSales)}`;
   document.getElementById('print-sum-box-in').innerText = `₹${formatCurrency(boxIn)}`;
   document.getElementById('print-sum-credit-recv').innerText = `₹${formatCurrency(creditRecv)}`;
+  const printYestPaytmEl = document.getElementById('print-sum-yesterday-paytm');
+  if (printYestPaytmEl) printYestPaytmEl.innerText = yesterdayPaytm > 0 ? `₹${formatCurrency(yesterdayPaytm)}` : '—';
   document.getElementById('print-total-inflows').innerText = `₹${formatCurrency(totalInflows)}`;
 
   document.getElementById('print-sum-paytm').innerText = `₹${formatCurrency(digitalPaytm)}`;
