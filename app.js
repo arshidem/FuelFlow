@@ -787,10 +787,6 @@ function renderOilsTable() {
   const container = document.getElementById('oil-rows');
   container.innerHTML = '';
   
-function renderOilsTable() {
-  const container = document.getElementById('oil-rows');
-  container.innerHTML = '';
-  
   const activeFilter = appState.activeNozzleFilter || 'all';
   const filteredOils = appState.oils.filter(oil => {
     if (activeFilter === 'all') return true;
@@ -1610,29 +1606,60 @@ function generatePdfFromPrintContainer(logDate) {
 function printSummaryReport() {
   saveCurrentStateToMemory();
   
-  // For print, always merge all nozzles to show full picture
-  const savedFilter = appState.activeNozzleFilter;
-  if (savedFilter !== 'all') {
+  const savedFilter = appState.activeNozzleFilter || 'all';
+  
+  let printNozzles = [];
+  let printOils = [];
+  let printExpenses = [];
+  let printFlows = {};
+  let printDenominations = {};
+  let printCashMode = 'bundles';
+  let printCashBundles = [];
+  
+  if (savedFilter === 'all') {
     mergeAllNozzlesToRoot();
+    printNozzles = appState.nozzles;
+    printOils = appState.oils;
+    printExpenses = appState.expenses;
+    printFlows = appState.flows;
+    printDenominations = appState.denominations;
+    printCashMode = appState.cashMode;
+    printCashBundles = appState.cashBundles;
+  } else {
+    if (savedFilter === 'general') {
+      printNozzles = [];
+      printOils = appState.oils.filter(o => !o.nozzleId || o.nozzleId === 'general');
+      printExpenses = appState.expenses.filter(e => !e.nozzleId || e.nozzleId === 'general');
+    } else {
+      const activeNozzle = appState.nozzles.find(n => n.id === savedFilter);
+      printNozzles = activeNozzle ? [activeNozzle] : [];
+      printOils = appState.oils.filter(o => o.nozzleId === savedFilter);
+      printExpenses = appState.expenses.filter(e => e.nozzleId === savedFilter);
+    }
+    printFlows = appState.flows;
+    printDenominations = appState.denominations;
+    printCashMode = appState.cashMode;
+    printCashBundles = appState.cashBundles;
   }
   
   const currentTempLog = {
     date: appState.currentDate,
-    nozzles: appState.nozzles,
-    oils: appState.oils,
-    expenses: appState.expenses,
-    flows: appState.flows,
-    denominations: appState.denominations,
-    cashMode: appState.cashMode,
-    cashBundles: appState.cashBundles
+    nozzles: printNozzles,
+    oils: printOils,
+    expenses: printExpenses,
+    flows: printFlows,
+    denominations: printDenominations,
+    cashMode: printCashMode,
+    cashBundles: printCashBundles
   };
   
   populatePrintTemplate(currentTempLog);
   window.print();
   
   // Restore filter state if it was changed
-  if (savedFilter !== 'all') {
-    appState.activeNozzleFilter = savedFilter;
+  if (savedFilter === 'all') {
+    mergeAllNozzlesToRoot();
+  } else {
     const nozzleState = appState.flowsByNozzle[savedFilter];
     if (nozzleState) {
       appState.flows = nozzleState.flows;
@@ -1640,8 +1667,8 @@ function printSummaryReport() {
       appState.cashMode = nozzleState.cashMode || 'bundles';
       appState.cashBundles = nozzleState.cashBundles || [];
     }
-    updateActiveNozzleFilterOptions();
   }
+  updateActiveNozzleFilterOptions();
 }
 
 function printHistoryLog(dateStr) {
@@ -1650,7 +1677,55 @@ function printHistoryLog(dateStr) {
     showToast('Failed to find matching historical log data.', true);
     return;
   }
-  populatePrintTemplate(log);
+  
+  const savedFilter = log.activeNozzleFilter || 'all';
+  
+  let printNozzles = [];
+  let printOils = [];
+  let printExpenses = [];
+  let printFlows = {};
+  let printDenominations = {};
+  let printCashMode = 'bundles';
+  let printCashBundles = [];
+  
+  if (savedFilter === 'all') {
+    printNozzles = log.nozzles;
+    printOils = log.oils || [];
+    printExpenses = log.expenses || [];
+    printFlows = log.flows;
+    printDenominations = log.denominations || {};
+    printCashMode = log.cashMode || 'bundles';
+    printCashBundles = log.cashBundles || [];
+  } else {
+    if (savedFilter === 'general') {
+      printNozzles = [];
+      printOils = (log.oils || []).filter(o => !o.nozzleId || o.nozzleId === 'general');
+      printExpenses = (log.expenses || []).filter(e => !e.nozzleId || e.nozzleId === 'general');
+    } else {
+      const activeNozzle = log.nozzles.find(n => n.id === savedFilter);
+      printNozzles = activeNozzle ? [activeNozzle] : [];
+      printOils = (log.oils || []).filter(o => o.nozzleId === savedFilter);
+      printExpenses = (log.expenses || []).filter(e => e.nozzleId === savedFilter);
+    }
+    const nozzleState = log.flowsByNozzle ? log.flowsByNozzle[savedFilter] : null;
+    printFlows = nozzleState ? nozzleState.flows : log.flows;
+    printDenominations = nozzleState ? nozzleState.denominations : (log.denominations || {});
+    printCashMode = nozzleState ? (nozzleState.cashMode || 'bundles') : (log.cashMode || 'bundles');
+    printCashBundles = nozzleState ? (nozzleState.cashBundles || []) : (log.cashBundles || []);
+  }
+  
+  const printLog = {
+    date: log.date,
+    nozzles: printNozzles,
+    oils: printOils,
+    expenses: printExpenses,
+    flows: printFlows,
+    denominations: printDenominations,
+    cashMode: printCashMode,
+    cashBundles: printCashBundles
+  };
+  
+  populatePrintTemplate(printLog);
   window.print();
 }
 
