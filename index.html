@@ -136,15 +136,15 @@
                 </div>
               </div>
             </div>
-
             <!-- Lubricant & Oil Sales Section -->
             <div class="dashboard-card">
-              <div class="card-header">
+              <div class="card-header flex-wrap gap-2" style="display: flex; justify-content: space-between; align-items: center;">
                 <div class="card-title">
                   <i class="fa-solid fa-bottle-droplet icon-oil"></i>
                   <h2>Oils & Lubricants Sales</h2>
                 </div>
-                <div class="card-actions">
+                <div class="card-actions flex-wrap gap-2" style="display: flex; align-items: center; gap: 0.5rem;">
+                  <select id="oil-nozzle-filter" class="form-control-inline select-nozzle-sync" style="max-width: 180px;"></select>
                   <button id="btn-add-oil" class="btn btn-outline btn-sm">
                     <i class="fa-solid fa-plus"></i> Add Item
                   </button>
@@ -156,7 +156,6 @@
                     <thead>
                       <tr>
                         <th>Item Description</th>
-                        <th>Nozzle / Cash Box</th>
                         <th>Unit Price (₹)</th>
                         <th>Quantity</th>
                         <th>Total Amount (₹)</th>
@@ -173,12 +172,13 @@
 
             <!-- Expenses Section -->
             <div class="dashboard-card">
-              <div class="card-header">
+              <div class="card-header flex-wrap gap-2" style="display: flex; justify-content: space-between; align-items: center;">
                 <div class="card-title">
                   <i class="fa-solid fa-receipt icon-expense"></i>
                   <h2>Daily Expenses Paid</h2>
                 </div>
-                <div class="card-actions">
+                <div class="card-actions flex-wrap gap-2" style="display: flex; align-items: center; gap: 0.5rem;">
+                  <select id="expense-nozzle-filter" class="form-control-inline select-nozzle-sync" style="max-width: 180px;"></select>
                   <button id="btn-add-expense" class="btn btn-outline btn-sm">
                     <i class="fa-solid fa-plus"></i> Add Expense
                   </button>
@@ -190,7 +190,6 @@
                     <thead>
                       <tr>
                         <th>Expense Description</th>
-                        <th>Nozzle / Cash Box</th>
                         <th>Amount (₹)</th>
                         <th>Actions</th>
                       </tr>
@@ -207,29 +206,16 @@
 
           <!-- Column 2: Financial Flows & Denominations -->
           <div class="side-column">
-            
-            <!-- Active Nozzle Selection Filter -->
-            <div class="dashboard-card" style="margin-bottom: 1rem;">
-              <div class="card-body" style="padding: 1rem;">
-                <div class="form-group mb-0">
-                  <label for="active-nozzle-filter" style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 0.5rem;">
-                    <span>Reconciliation Target (Nozzle/Operator)</span>
-                    <i class="fa-solid fa-user-gear text-primary"></i>
-                  </label>
-                  <select id="active-nozzle-filter" class="form-control" style="width: 100%;">
-                    <option value="all">All Nozzles (Merged View)</option>
-                    <option value="general">General / Unassigned</option>
-                  </select>
-                </div>
-              </div>
-            </div>
 
             <!-- Other Transactions (UPI, Paytm, Credit) -->
             <div class="dashboard-card">
-              <div class="card-header">
+              <div class="card-header flex-wrap gap-2" style="display: flex; justify-content: space-between; align-items: center;">
                 <div class="card-title">
                   <i class="fa-solid fa-money-bill-transfer icon-trans"></i>
                   <h2>Digital & Credit Flows</h2>
+                </div>
+                <div class="card-actions">
+                  <select id="flows-nozzle-filter" class="form-control-inline select-nozzle-sync" style="max-width: 180px;"></select>
                 </div>
               </div>
               <div class="card-body form-grid">
@@ -293,12 +279,15 @@
             <!-- Actual Cash in Hand Section (Dual Mode) -->
             <div class="dashboard-card" id="cash-counted-card">
               <div class="card-header flex-col align-stretch gap-2 pb-0">
-                <div class="flex-between align-center">
+                <div class="flex-between align-center" style="display: flex; justify-content: space-between; align-items: center;">
                   <div class="card-title">
                     <i class="fa-solid fa-coins icon-coins"></i>
                     <h2>Actual Cash in Hand</h2>
                   </div>
-                  <button id="btn-clear-cash" class="btn-text">Clear</button>
+                  <div class="flex-align-center gap-2" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <select id="cash-nozzle-filter" class="form-control-inline select-nozzle-sync" style="max-width: 150px;"></select>
+                    <button id="btn-clear-cash" class="btn-text">Clear</button>
+                  </div>
                 </div>
                 
                 <!-- Toggle Mode Tabs -->
@@ -390,10 +379,15 @@
 
             <!-- Reconciliation Summary Panel -->
             <div class="dashboard-card summary-card" id="summary-section">
-              <div class="card-header border-none">
-                <div class="card-title">
-                  <i class="fa-solid fa-chart-pie"></i>
-                  <h2>Day Reconciliation</h2>
+              <div class="card-header border-none flex-col align-stretch gap-2 pb-2" style="display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; padding-bottom: 0.5rem;">
+                <div class="flex-between align-center" style="display: flex; justify-content: space-between; align-items: center;">
+                  <div class="card-title">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <h2>Day Reconciliation</h2>
+                  </div>
+                </div>
+                <div class="recon-nozzle-filter-wrapper">
+                  <select id="recon-nozzle-filter" class="form-control select-nozzle-sync" style="width: 100%;"></select>
                 </div>
               </div>
               <div class="card-body pt-0">

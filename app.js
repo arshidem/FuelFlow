@@ -132,6 +132,62 @@ function setupEventListeners() {
   
   // Theme toggle
   document.getElementById('theme-toggle-header').addEventListener('click', toggleTheme);
+
+  // Active Nozzle Filter change event
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.classList.contains('select-nozzle-sync')) {
+      const oldActiveId = appState.activeNozzleFilter || 'all';
+      
+      // Save current UI to old active nozzle state
+      if (oldActiveId !== 'all') {
+        ensureNozzleFlowsState(oldActiveId);
+        const targetFlows = appState.flowsByNozzle[oldActiveId].flows;
+        
+        targetFlows.paytm = parseFloat(document.getElementById('flow-paytm').value) || 0;
+        targetFlows.yesterdayPaytm = parseFloat(document.getElementById('flow-yesterday-paytm').value) || 0;
+        targetFlows.card = parseFloat(document.getElementById('flow-card').value) || 0;
+        targetFlows.creditSale = parseFloat(document.getElementById('flow-credit-sale').value) || 0;
+        targetFlows.creditRecv = parseFloat(document.getElementById('flow-credit-recv').value) || 0;
+        targetFlows.boxAmount = parseFloat(document.getElementById('flow-box-amount').value) || 0;
+        targetFlows.officeCash = parseFloat(document.getElementById('flow-office-cash').value) || 0;
+        targetFlows.carryBoxAmount = parseFloat(document.getElementById('carry-box-amount').value) || 0;
+        targetFlows.remarks = document.getElementById('day-remarks').value;
+        
+        appState.flowsByNozzle[oldActiveId].cashMode = appState.cashMode;
+        appState.flowsByNozzle[oldActiveId].cashBundles = JSON.parse(JSON.stringify(appState.cashBundles));
+      }
+      
+      // Switch to new nozzle
+      const newActiveId = e.target.value;
+      appState.activeNozzleFilter = newActiveId;
+      
+      // Sync all dropdowns
+      document.querySelectorAll('.select-nozzle-sync').forEach(select => {
+        select.value = newActiveId;
+      });
+      
+      if (newActiveId === 'all') {
+        mergeAllNozzlesToRoot();
+        setFlowsAndCashInputsReadOnly(true);
+      } else {
+        ensureNozzleFlowsState(newActiveId);
+        const nozzleState = appState.flowsByNozzle[newActiveId];
+        appState.flows = nozzleState.flows;
+        appState.denominations = nozzleState.denominations;
+        appState.cashMode = nozzleState.cashMode || 'bundles';
+        appState.cashBundles = nozzleState.cashBundles || [];
+        setFlowsAndCashInputsReadOnly(false);
+      }
+      
+      fillFlowsInputs();
+      fillDenominationsInputs();
+      renderOilsTable();
+      renderExpensesTable();
+      renderCashBundlesTable();
+      syncCashModeUI();
+      calculateReconciliation();
+    }
+  });
   
   // Date selection changed
   document.getElementById('entry-date').addEventListener('change', (e) => {
@@ -175,10 +231,20 @@ function setupEventListeners() {
   // Carry Box Amount and Remarks trigger
   document.getElementById('carry-box-amount').addEventListener('input', (e) => {
     appState.flows.carryBoxAmount = parseFloat(e.target.value) || 0;
+    const activeId = appState.activeNozzleFilter || 'all';
+    if (activeId !== 'all') {
+      ensureNozzleFlowsState(activeId);
+      appState.flowsByNozzle[activeId].flows.carryBoxAmount = parseFloat(e.target.value) || 0;
+    }
     calculateReconciliation();
   });
   document.getElementById('day-remarks').addEventListener('input', (e) => {
     appState.flows.remarks = e.target.value;
+    const activeId = appState.activeNozzleFilter || 'all';
+    if (activeId !== 'all') {
+      ensureNozzleFlowsState(activeId);
+      appState.flowsByNozzle[activeId].flows.remarks = e.target.value;
+    }
     calculateReconciliation();
   });
   
@@ -290,6 +356,8 @@ function loadDayData(dateStr) {
       appState.denominations = draft.denominations || {};
       appState.cashMode = draft.cashMode || 'bundles';
       appState.cashBundles = draft.cashBundles || [];
+      appState.flowsByNozzle = draft.flowsByNozzle || {};
+      appState.activeNozzleFilter = draft.activeNozzleFilter || 'all';
       loadedFromDraft = true;
     } catch (e) {
       console.error("Error parsing temporary draft data:", e);
@@ -309,10 +377,33 @@ function loadDayData(dateStr) {
       appState.denominations = JSON.parse(JSON.stringify(existingLog.denominations || {}));
       appState.cashMode = existingLog.cashMode || 'bundles';
       appState.cashBundles = existingLog.cashBundles || [];
+      appState.flowsByNozzle = existingLog.flowsByNozzle || {};
+      appState.activeNozzleFilter = existingLog.activeNozzleFilter || 'all';
     } else {
       // Initialize fresh template based on settings
       initializeFreshDayTemplate();
     }
+  }
+
+  // Ensure every nozzle has an entry in flowsByNozzle
+  ensureNozzleFlowsState('general');
+  appState.nozzles.forEach(nozzle => {
+    ensureNozzleFlowsState(nozzle.id);
+  });
+  
+  // Set read-only mode and select dropdown value based on activeNozzleFilter
+  updateActiveNozzleFilterOptions();
+  
+  if (appState.activeNozzleFilter === 'all') {
+    mergeAllNozzlesToRoot();
+    setFlowsAndCashInputsReadOnly(true);
+  } else {
+    const nozzleState = appState.flowsByNozzle[appState.activeNozzleFilter];
+    appState.flows = nozzleState.flows;
+    appState.denominations = nozzleState.denominations;
+    appState.cashMode = nozzleState.cashMode || 'bundles';
+    appState.cashBundles = nozzleState.cashBundles || [];
+    setFlowsAndCashInputsReadOnly(false);
   }
   
   // Render tables
@@ -371,27 +462,20 @@ function ensureNozzleFlowsState(nozzleId) {
 }
 
 function updateActiveNozzleFilterOptions() {
-  const filterSelect = document.getElementById('active-nozzle-filter');
-  if (!filterSelect) return;
+  const selects = document.querySelectorAll('.select-nozzle-sync');
+  if (selects.length === 0) return;
   
-  const currentValue = filterSelect.value || 'all';
+  const currentValue = appState.activeNozzleFilter || 'all';
   
-  filterSelect.innerHTML = `
+  const optionsHtml = `
     <option value="all">All Nozzles (Merged View)</option>
     <option value="general">General / Unassigned</option>
-  `;
+  ` + appState.nozzles.map(nozzle => `<option value="${nozzle.id}">${nozzle.name}</option>`).join('');
   
-  appState.nozzles.forEach(nozzle => {
-    filterSelect.innerHTML += `<option value="${nozzle.id}">${nozzle.name}</option>`;
+  selects.forEach(select => {
+    select.innerHTML = optionsHtml;
+    select.value = currentValue;
   });
-  
-  // Restore value if it still exists
-  if ([...filterSelect.options].some(opt => opt.value === currentValue)) {
-    filterSelect.value = currentValue;
-  } else {
-    filterSelect.value = 'all';
-    appState.activeNozzleFilter = 'all';
-  }
 }
 
 function setFlowsAndCashInputsReadOnly(isReadOnly) {
@@ -571,6 +655,13 @@ function updateFlowsStateFromUI() {
   appState.flows.creditRecv = parseFloat(document.getElementById('flow-credit-recv').value) || 0;
   appState.flows.boxAmount = parseFloat(document.getElementById('flow-box-amount').value) || 0;
   appState.flows.officeCash = parseFloat(document.getElementById('flow-office-cash').value) || 0;
+  
+  // Sync to nozzle-specific state if a specific nozzle is active
+  const activeId = appState.activeNozzleFilter || 'all';
+  if (activeId !== 'all') {
+    ensureNozzleFlowsState(activeId);
+    appState.flowsByNozzle[activeId].flows = { ...appState.flows };
+  }
 }
 
 function updateDenominationsStateFromUI() {
@@ -632,6 +723,9 @@ function updateNozzleField(id, field, value) {
   
   if (field === 'name') {
     nozzle.name = value;
+    updateActiveNozzleFilterOptions();
+    renderOilsTable();
+    renderExpensesTable();
   } else {
     nozzle[field] = parseFloat(value) || 0;
   }
@@ -668,13 +762,23 @@ function addNewNozzleRow() {
     net: 0,
     amount: 0
   });
+  ensureNozzleFlowsState(id);
   renderNozzlesTable();
+  updateActiveNozzleFilterOptions();
+  renderOilsTable();
+  renderExpensesTable();
   calculateReconciliation();
 }
 
 function deleteNozzleRow(id) {
   appState.nozzles = appState.nozzles.filter(n => n.id !== id);
+  if (appState.activeNozzleFilter === id) {
+    appState.activeNozzleFilter = 'all';
+  }
   renderNozzlesTable();
+  updateActiveNozzleFilterOptions();
+  renderOilsTable();
+  renderExpensesTable();
   calculateReconciliation();
 }
 
@@ -683,17 +787,35 @@ function renderOilsTable() {
   const container = document.getElementById('oil-rows');
   container.innerHTML = '';
   
-  if (appState.oils.length === 0) {
-    container.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No oil items added today. Click "Add Item" to add lubricant sales.</td></tr>`;
+function renderOilsTable() {
+  const container = document.getElementById('oil-rows');
+  container.innerHTML = '';
+  
+  const activeFilter = appState.activeNozzleFilter || 'all';
+  const filteredOils = appState.oils.filter(oil => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'general') return !oil.nozzleId || oil.nozzleId === 'general';
+    return oil.nozzleId === activeFilter;
+  });
+
+  if (filteredOils.length === 0) {
+    container.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No oil items recorded under this filter.</td></tr>`;
     return;
   }
   
-  appState.oils.forEach(oil => {
+  filteredOils.forEach(oil => {
+    // Get nozzle label for display in merged view
+    const nozzleLabel = oil.nozzleId && oil.nozzleId !== 'general' 
+      ? (appState.nozzles.find(n => n.id === oil.nozzleId)?.name || 'General') 
+      : 'General';
+
+    const labelSuffix = activeFilter === 'all' ? ` <small class="text-muted">(${nozzleLabel})</small>` : '';
+
     const row = document.createElement('tr');
     row.className = 'responsive-row';
     row.innerHTML = `
       <td class="col-desc" data-label="Description">
-        <input type="text" class="form-control-inline text-bold" value="${oil.description}" placeholder="e.g. Engine Oil 4T" onchange="updateOilField('${oil.id}', 'description', this.value)">
+        <input type="text" class="form-control-inline text-bold" value="${oil.description}" placeholder="e.g. Engine Oil 4T" onchange="updateOilField('${oil.id}', 'description', this.value)">${labelSuffix}
       </td>
       <td class="col-price" data-label="Price (₹)">
         <input type="number" step="0.01" class="form-control-inline" value="${oil.price}" oninput="updateOilField('${oil.id}', 'price', this.value)">
@@ -724,6 +846,8 @@ function updateOilField(id, field, value) {
     oil.price = parseFloat(value) || 0;
   } else if (field === 'quantity') {
     oil.quantity = parseInt(value) || 0;
+  } else if (field === 'nozzleId') {
+    oil.nozzleId = value;
   }
   
   oil.total = oil.price * oil.quantity;
@@ -736,12 +860,15 @@ function updateOilField(id, field, value) {
 
 function addNewOilRow() {
   const id = 'o_' + Date.now();
+  const activeFilter = appState.activeNozzleFilter || 'all';
+  const targetNozzleId = activeFilter === 'all' ? 'general' : activeFilter;
   appState.oils.push({
     id: id,
     description: '',
     price: 0,
     quantity: 0,
-    total: 0
+    total: 0,
+    nozzleId: targetNozzleId
   });
   renderOilsTable();
   calculateReconciliation();
@@ -753,22 +880,35 @@ function deleteOilRow(id) {
   calculateReconciliation();
 }
 
-// EXPENSES TABLE LOGIC
 function renderExpensesTable() {
   const container = document.getElementById('expense-rows');
   container.innerHTML = '';
   
-  if (appState.expenses.length === 0) {
-    container.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No expenses recorded today.</td></tr>`;
+  const activeFilter = appState.activeNozzleFilter || 'all';
+  const filteredExpenses = appState.expenses.filter(exp => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'general') return !exp.nozzleId || exp.nozzleId === 'general';
+    return exp.nozzleId === activeFilter;
+  });
+
+  if (filteredExpenses.length === 0) {
+    container.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No expenses recorded under this filter.</td></tr>`;
     return;
   }
   
-  appState.expenses.forEach(exp => {
+  filteredExpenses.forEach(exp => {
+    // Get nozzle label for display in merged view
+    const nozzleLabel = exp.nozzleId && exp.nozzleId !== 'general' 
+      ? (appState.nozzles.find(n => n.id === exp.nozzleId)?.name || 'General') 
+      : 'General';
+
+    const labelSuffix = activeFilter === 'all' ? ` <small class="text-muted">(${nozzleLabel})</small>` : '';
+
     const row = document.createElement('tr');
     row.className = 'responsive-row';
     row.innerHTML = `
       <td class="col-desc" data-label="Description">
-        <input type="text" class="form-control-inline" value="${exp.description}" placeholder="e.g. Staff Tea / Calibration Testing" onchange="updateExpenseField('${exp.id}', 'description', this.value)">
+        <input type="text" class="form-control-inline" value="${exp.description}" placeholder="e.g. Staff Tea / Calibration Testing" onchange="updateExpenseField('${exp.id}', 'description', this.value)">${labelSuffix}
       </td>
       <td class="col-amount" data-label="Amount (₹)">
         <input type="number" step="0.01" class="form-control-inline text-bold text-danger" value="${exp.amount || ''}" placeholder="0.00" oninput="updateExpenseField('${exp.id}', 'amount', this.value)">
@@ -789,18 +929,23 @@ function updateExpenseField(id, field, value) {
   
   if (field === 'description') {
     exp.description = value;
-  } else {
+  } else if (field === 'amount') {
     exp.amount = parseFloat(value) || 0;
+  } else if (field === 'nozzleId') {
+    exp.nozzleId = value;
   }
   calculateReconciliation();
 }
 
 function addNewExpenseRow() {
   const id = 'e_' + Date.now();
+  const activeFilter = appState.activeNozzleFilter || 'all';
+  const targetNozzleId = activeFilter === 'all' ? 'general' : activeFilter;
   appState.expenses.push({
     id: id,
     description: '',
-    amount: 0
+    amount: 0,
+    nozzleId: targetNozzleId
   });
   renderExpensesTable();
   calculateReconciliation();
@@ -817,12 +962,31 @@ function deleteExpenseRow(id) {
 // -------------------------------------------------------------
 
 function calculateReconciliation() {
+  const activeId = appState.activeNozzleFilter || 'all';
+
+  if (activeId === 'all') {
+    mergeAllNozzlesToRoot();
+  }
+
   // A. Sum Fuel Sales
-  const fuelSalesTotal = appState.nozzles.reduce((sum, n) => sum + n.amount, 0);
+  let fuelSalesTotal = 0;
+  if (activeId === 'all') {
+    fuelSalesTotal = appState.nozzles.reduce((sum, n) => sum + (n.amount || 0), 0);
+  } else if (activeId === 'general') {
+    fuelSalesTotal = 0;
+  } else {
+    const nozzle = appState.nozzles.find(n => n.id === activeId);
+    fuelSalesTotal = nozzle ? (nozzle.amount || 0) : 0;
+  }
   document.getElementById('sum-fuel-sales').innerText = `₹${formatCurrency(fuelSalesTotal)}`;
   
   // B. Sum Oils & Lubricants
-  const oilSalesTotal = appState.oils.reduce((sum, o) => sum + o.total, 0);
+  let oilSalesTotal = 0;
+  if (activeId === 'all') {
+    oilSalesTotal = appState.oils.reduce((sum, o) => sum + (o.total || 0), 0);
+  } else {
+    oilSalesTotal = appState.oils.filter(o => o.nozzleId === activeId).reduce((sum, o) => sum + (o.total || 0), 0);
+  }
   document.getElementById('sum-oil-sales').innerText = `₹${formatCurrency(oilSalesTotal)}`;
   
   // C. Inflows Additions
@@ -848,7 +1012,12 @@ function calculateReconciliation() {
   const creditSaleToday = appState.flows.creditSale || 0;
   document.getElementById('sum-credit-sale').innerText = `- ₹${formatCurrency(creditSaleToday)}`;
   
-  const expensesTotal = appState.expenses.reduce((sum, e) => sum + e.amount, 0);
+  let expensesTotal = 0;
+  if (activeId === 'all') {
+    expensesTotal = appState.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  } else {
+    expensesTotal = appState.expenses.filter(e => e.nozzleId === activeId).reduce((sum, e) => sum + (e.amount || 0), 0);
+  }
   document.getElementById('sum-expenses').innerText = `- ₹${formatCurrency(expensesTotal)}`;
   
   const officeCash = appState.flows.officeCash || 0;
@@ -868,13 +1037,13 @@ function calculateReconciliation() {
   let actualCash = 0;
   
   // Calculate detailed denominations notes for preview
-  const v500 = appState.denominations.n500 * 500;
-  const v200 = appState.denominations.n200 * 200;
-  const v100 = appState.denominations.n100 * 100;
-  const v50 = appState.denominations.n50 * 50;
-  const v20 = appState.denominations.n20 * 20;
-  const v10 = appState.denominations.n10 * 10;
-  const vcoins = appState.denominations.coins;
+  const v500 = (appState.denominations.n500 || 0) * 500;
+  const v200 = (appState.denominations.n200 || 0) * 200;
+  const v100 = (appState.denominations.n100 || 0) * 100;
+  const v50 = (appState.denominations.n50 || 0) * 50;
+  const v20 = (appState.denominations.n20 || 0) * 20;
+  const v10 = (appState.denominations.n10 || 0) * 10;
+  const vcoins = appState.denominations.coins || 0;
   
   // Update UI Result labels in Denominations Box
   document.getElementById('res-500').innerText = `₹${formatCurrency(v500)}`;
@@ -886,7 +1055,7 @@ function calculateReconciliation() {
   document.getElementById('res-coins').innerText = `₹${formatCurrency(vcoins)}`;
   
   if (appState.cashMode === 'bundles') {
-    actualCash = appState.cashBundles.reduce((sum, b) => sum + b.amount, 0);
+    actualCash = appState.cashBundles.reduce((sum, b) => sum + (b.amount || 0), 0);
   } else {
     actualCash = v500 + v200 + v100 + v50 + v20 + v10 + vcoins;
   }
@@ -945,7 +1114,9 @@ function saveActiveDraftToLocalStorage() {
     flows: appState.flows,
     denominations: appState.denominations,
     cashMode: appState.cashMode,
-    cashBundles: appState.cashBundles
+    cashBundles: appState.cashBundles,
+    flowsByNozzle: appState.flowsByNozzle,
+    activeNozzleFilter: appState.activeNozzleFilter
   };
   localStorage.setItem(`fuelflow_draft_${appState.currentDate}`, JSON.stringify(draft));
 }
@@ -1077,7 +1248,7 @@ function saveTodayLog() {
   saveCurrentStateToMemory();
   
   // Simple validation
-  const totalSales = appState.nozzles.reduce((sum, n) => sum + n.amount, 0) + appState.oils.reduce((sum, o) => sum + o.total, 0);
+  const totalSales = appState.nozzles.reduce((sum, n) => sum + (n.amount || 0), 0) + appState.oils.reduce((sum, o) => sum + (o.total || 0), 0);
   if (totalSales === 0 && appState.expenses.length === 0 && appState.flows.paytm === 0) {
     if (!confirm('You are saving a blank log with 0 sales. Do you want to proceed?')) {
       return;
@@ -1094,14 +1265,18 @@ function saveTodayLog() {
     expenses: JSON.parse(JSON.stringify(appState.expenses)),
     flows: JSON.parse(JSON.stringify(appState.flows)),
     denominations: JSON.parse(JSON.stringify(appState.denominations)),
+    cashMode: appState.cashMode,
+    cashBundles: JSON.parse(JSON.stringify(appState.cashBundles)),
+    flowsByNozzle: JSON.parse(JSON.stringify(appState.flowsByNozzle || {})),
+    activeNozzleFilter: appState.activeNozzleFilter,
     // Metrics cached for easy search
     metrics: {
-      fuelSales: appState.nozzles.reduce((sum, n) => sum + n.amount, 0),
-      oilSales: appState.oils.reduce((sum, o) => sum + o.total, 0),
-      expenses: appState.expenses.reduce((sum, e) => sum + e.amount, 0),
-      expectedCash: parseFloat(document.getElementById('sum-expected-cash').innerText.replace(/[₹,]/g, '')),
-      actualCash: parseFloat(document.getElementById('sum-actual-cash').innerText.replace(/[₹,]/g, '')),
-      variance: parseFloat(document.getElementById('variance-value').innerText.replace(/[+₹,\s-]/g, '')) * (document.getElementById('variance-label').innerText.includes('Shortage') ? -1 : 1)
+      fuelSales: appState.nozzles.reduce((sum, n) => sum + (n.amount || 0), 0),
+      oilSales: appState.oils.reduce((sum, o) => sum + (o.total || 0), 0),
+      expenses: appState.expenses.reduce((sum, e) => sum + (e.amount || 0), 0),
+      expectedCash: parseFloat(document.getElementById('sum-expected-cash').innerText.replace(/[₹,]/g, '')) || 0,
+      actualCash: parseFloat(document.getElementById('sum-actual-cash').innerText.replace(/[₹,]/g, '')) || 0,
+      variance: (parseFloat(document.getElementById('variance-value').innerText.replace(/[+₹,\s-]/g, '')) || 0) * (document.getElementById('variance-label').innerText.includes('Shortage') ? -1 : 1)
     }
   };
   
@@ -1260,9 +1435,10 @@ function populatePrintTemplate(logData) {
   oilTbody.innerHTML = '';
   if (logData.oils && logData.oils.length > 0) {
     logData.oils.forEach(o => {
+      const nozzleName = getNozzleLabelForPrint(o.nozzleId, logData.nozzles);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${o.description}</td>
+        <td>${o.description} <small style="color:#888;">[${nozzleName}]</small></td>
         <td class="text-right">₹${o.price.toFixed(2)}</td>
         <td class="text-right">${o.quantity}</td>
         <td class="text-right text-bold">₹${formatCurrency(o.total)}</td>
@@ -1278,9 +1454,10 @@ function populatePrintTemplate(logData) {
   expTbody.innerHTML = '';
   if (logData.expenses && logData.expenses.length > 0) {
     logData.expenses.forEach(e => {
+      const nozzleName = getNozzleLabelForPrint(e.nozzleId, logData.nozzles);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${e.description}</td>
+        <td>${e.description} <small style="color:#888;">[${nozzleName}]</small></td>
         <td class="text-right text-bold text-danger">₹${formatCurrency(e.amount)}</td>
       `;
       expTbody.appendChild(tr);
@@ -1385,8 +1562,59 @@ function populatePrintTemplate(logData) {
   document.getElementById('print-remarks').innerText = logData.flows.remarks || 'No notes added for the day.';
 }
 
+function getNozzleLabelForPrint(nozzleId, nozzles) {
+  if (!nozzleId || nozzleId === 'general') return 'General';
+  const nozzle = (nozzles || []).find(n => n.id === nozzleId);
+  return nozzle ? nozzle.name : 'General';
+}
+
+function generatePdfFromPrintContainer(logDate) {
+  const printContainer = document.getElementById('print-report-container');
+  
+  // Temporarily make print container visible for html2pdf
+  printContainer.style.display = 'block';
+  printContainer.style.position = 'absolute';
+  printContainer.style.left = '-9999px';
+  printContainer.style.top = '0';
+  
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0, 5).replace(':', '-');
+  const fileName = `${logDate}_${timeStr}_daily_collection_report.pdf`;
+  
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: fileName,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+  };
+  
+  html2pdf().set(opt).from(printContainer).save().then(() => {
+    printContainer.style.display = '';
+    printContainer.style.position = '';
+    printContainer.style.left = '';
+    printContainer.style.top = '';
+    showToast(`PDF downloaded: ${fileName}`);
+  }).catch(err => {
+    printContainer.style.display = '';
+    printContainer.style.position = '';
+    printContainer.style.left = '';
+    printContainer.style.top = '';
+    console.error('PDF generation error:', err);
+    showToast('PDF generation failed. Falling back to print...', true);
+    window.print();
+  });
+}
+
 function printSummaryReport() {
   saveCurrentStateToMemory();
+  
+  // For print, always merge all nozzles to show full picture
+  const savedFilter = appState.activeNozzleFilter;
+  if (savedFilter !== 'all') {
+    mergeAllNozzlesToRoot();
+  }
   
   const currentTempLog = {
     date: appState.currentDate,
@@ -1394,11 +1622,26 @@ function printSummaryReport() {
     oils: appState.oils,
     expenses: appState.expenses,
     flows: appState.flows,
-    denominations: appState.denominations
+    denominations: appState.denominations,
+    cashMode: appState.cashMode,
+    cashBundles: appState.cashBundles
   };
   
   populatePrintTemplate(currentTempLog);
   window.print();
+  
+  // Restore filter state if it was changed
+  if (savedFilter !== 'all') {
+    appState.activeNozzleFilter = savedFilter;
+    const nozzleState = appState.flowsByNozzle[savedFilter];
+    if (nozzleState) {
+      appState.flows = nozzleState.flows;
+      appState.denominations = nozzleState.denominations;
+      appState.cashMode = nozzleState.cashMode || 'bundles';
+      appState.cashBundles = nozzleState.cashBundles || [];
+    }
+    updateActiveNozzleFilterOptions();
+  }
 }
 
 function printHistoryLog(dateStr) {
@@ -1582,10 +1825,14 @@ function importBackupJSON(e) {
 // -------------------------------------------------------------
 
 function formatCurrency(num) {
+  if (num === undefined || num === null || isNaN(num)) {
+    return '0.00';
+  }
   // Format numbers with comma separation in Indian Format (Lakhs, Crores) or standard thousands
   // Indian Style currency regex:
   const rounded = Math.round(num * 100) / 100;
   const parts = rounded.toFixed(2).split('.');
+  if (parts.length < 2) return parts[0] + '.00';
   let lastThree = parts[0].substring(parts[0].length - 3);
   const otherBits = parts[0].substring(0, parts[0].length - 3);
   if (otherBits !== '') {
